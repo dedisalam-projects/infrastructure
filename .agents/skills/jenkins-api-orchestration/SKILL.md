@@ -28,6 +28,19 @@ metadata:
 
 ### 1. Remote Jenkins REST API Pattern
 
+#### Windows Global Environment Scope Resolution (Process vs User)
+On Windows systems, PowerShell `$env:VARIABLE` only inspects process-level variables inherited at shell startup. If credentials are set globally in Windows User or System Environment Settings (e.g. via `setx` or GUI), `$env:` will return empty.
+Always resolve credentials with a fallback to `[Environment]::GetEnvironmentVariable`:
+
+```powershell
+# Auto-load persistent User environment credentials into session if missing
+if (-not $env:JENKINS_API_TOKEN) {
+    $env:JENKINS_USER = [Environment]::GetEnvironmentVariable("JENKINS_USER", "User")
+    $env:JENKINS_API_TOKEN = [Environment]::GetEnvironmentVariable("JENKINS_API_TOKEN", "User")
+    $env:JENKINS_URL = [Environment]::GetEnvironmentVariable("JENKINS_URL", "User")
+}
+```
+
 #### Authentication & PowerShell Safety
 Always invoke `curl.exe` explicitly on Windows PowerShell to bypass the `Invoke-WebRequest` alias. Authenticate using HTTP Basic Authentication with your Jenkins Username and API Token:
 
