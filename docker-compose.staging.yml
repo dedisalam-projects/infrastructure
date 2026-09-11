@@ -101,7 +101,8 @@ services:
       - no-new-privileges:true
 
   user-service:
-    image: dedisalam/backend-user-service:${BACKEND_TAG:-latest}
+    image: dedisalam/backend-user-service:${BACKEND_TAG:-staging}
+    pull_policy: missing
     container_name: user-service-staging
     restart: unless-stopped
     ports:
@@ -141,7 +142,8 @@ services:
       - no-new-privileges:true
 
   notification-service:
-    image: dedisalam/backend-notification-service:${BACKEND_TAG:-latest}
+    image: dedisalam/backend-notification-service:${BACKEND_TAG:-staging}
+    pull_policy: missing
     container_name: notification-service-staging
     restart: unless-stopped
     ports:
@@ -180,7 +182,8 @@ services:
       - no-new-privileges:true
 
   gateway:
-    image: dedisalam/backend-gateway:${BACKEND_TAG:-latest}
+    image: dedisalam/backend-gateway:${BACKEND_TAG:-staging}
+    pull_policy: missing
     container_name: gateway-staging
     restart: unless-stopped
     ports:
