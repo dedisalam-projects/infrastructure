@@ -1,0 +1,239 @@
+# =============================================================================
+# Dedisalam Infrastructure - Dedicated Staging Environment Profile
+# =============================================================================
+# Isolated Docker Compose stack for automated CI/CD test suites (Layer 1 - 7).
+# Designed to prevent data pollution in production datastores and eliminate
+# port collisions with production or development server environments.
+# =============================================================================
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: mongodb-staging
+    restart: unless-stopped
+    ports:
+      - "${MONGO_STAGING_PORT:-27018}:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME:-root_staging}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD:-staging_mongo_password}
+      - MONGO_INITDB_DATABASE=user_db_staging
+    volumes:
+      - mongodb_staging_data:/data/db
+    networks:
+      - staging_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet -u $${MONGO_INITDB_ROOT_USERNAME:-root_staging} -p $${MONGO_INITDB_ROOT_PASSWORD:-staging_mongo_password} --authenticationDatabase admin --eval 'db.runCommand(\"ping\").ok' localhost:27017/test"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-staging
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-staging_redis_password}
+    ports:
+      - "${REDIS_STAGING_PORT:-6380}:6379"
+    volumes:
+      - redis_staging_data:/data
+    networks:
+      - staging_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-staging_redis_password}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq-staging
+    restart: unless-stopped
+    ports:
+      - "${RABBITMQ_STAGING_PORT:-5673}:5672"
+      - "${RABBITMQ_STAGING_MGMT_PORT:-15673}:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-staging_user}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS:-staging_rabbitmq_password}
+    volumes:
+      - rabbitmq_staging_data:/var/lib/rabbitmq
+    networks:
+      - staging_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+    security_opt:
+      - no-new-privileges:true
+
+  user-service:
+    image: dedisalam/backend-user-service:${BACKEND_TAG:-latest}
+    container_name: user-service-staging
+    restart: unless-stopped
+    ports:
+      - "${USER_SERVICE_STAGING_PORT:-3021}:3011"
+    environment:
+      - USER_SERVICE_MONGO_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-root_staging}:${MONGO_INITDB_ROOT_PASSWORD:-staging_mongo_password}@mongodb:27017/user_db_staging?authSource=admin
+      - JWT_SECRET=${JWT_SECRET:-staging_jwt_secret_key_testing_only}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-staging_user}:${RABBITMQ_PASS:-staging_rabbitmq_password}@rabbitmq:5672
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-staging_redis_password}@redis:6379
+      - USER_SERVICE_TCP_PORT=3001
+      - USER_SERVICE_PORT=3011
+    networks:
+      - staging_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3011/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+
+  notification-service:
+    image: dedisalam/backend-notification-service:${BACKEND_TAG:-latest}
+    container_name: notification-service-staging
+    restart: unless-stopped
+    ports:
+      - "${NOTIFICATION_SERVICE_STAGING_PORT:-3022}:3012"
+    environment:
+      - NOTIFICATION_SERVICE_MONGO_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-root_staging}:${MONGO_INITDB_ROOT_PASSWORD:-staging_mongo_password}@mongodb:27017/notification_db_staging?authSource=admin
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-staging_user}:${RABBITMQ_PASS:-staging_rabbitmq_password}@rabbitmq:5672
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-staging_redis_password}@redis:6379
+      - NOTIFICATION_SERVICE_TCP_PORT=3002
+      - NOTIFICATION_SERVICE_PORT=3012
+    networks:
+      - staging_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3012/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+
+  gateway:
+    image: dedisalam/backend-gateway:${BACKEND_TAG:-latest}
+    container_name: gateway-staging
+    restart: unless-stopped
+    ports:
+      - "${GATEWAY_STAGING_PORT:-3005}:3000"
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-staging_jwt_secret_key_testing_only}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-staging_user}:${RABBITMQ_PASS:-staging_rabbitmq_password}@rabbitmq:5672
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-staging_redis_password}@redis:6379
+      - USER_SERVICE_TCP_PORT=3001
+      - USER_SERVICE_TCP_HOST=user-service
+      - NOTIFICATION_SERVICE_TCP_PORT=3002
+      - NOTIFICATION_SERVICE_TCP_HOST=notification-service
+      - GATEWAY_PORT=3000
+    networks:
+      - staging_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/v1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  staging_network:
+    name: fullstack_staging_network
+    driver: bridge
+
+volumes:
+  mongodb_staging_data:
+    name: fullstack_mongodb_staging_data
+  redis_staging_data:
+    name: fullstack_redis_staging_data
+  rabbitmq_staging_data:
+    name: fullstack_rabbitmq_staging_data

@@ -87,3 +87,35 @@ curl.exe -X POST -u "<USER>:<API_TOKEN>" `
   --data-binary "@jenkins/job-config.xml" `
   "https://jenkins.dedisalam.my.id/createItem?name=fullstack-infrastructure"
 ```
+
+### 5. Dedicated Staging Environment & CI Pipeline (`fullstack-infra-stagging`)
+
+To safeguard production datastores from automated tests and ensure determinism across the 7-layer testing matrix (Unit, PBT, Mutation, Realtime Socket.IO E2E, Contracts, Concurrency Load, and Chaos Resilience), a dedicated Staging Docker Compose stack is provided.
+
+- **Compose Configuration**: `docker-compose.staging.yml`
+- **Environment Template**: `.env.staging.example`
+- **Jenkins Credential**: `infra-staging-env` (`Secret file` containing `.env.staging`)
+- **Jenkins Pipeline Job**: `fullstack-infra-stagging` (`Jenkinsfile.staging`)
+
+#### Staging Port & Service Allocation (Zero Conflict)
+- Gateway Staging: `3005` (`GATEWAY_URL=http://localhost:3005`)
+- MongoDB Staging: `27018` (Databases: `user_db_staging`, `notification_db_staging`)
+- Redis Staging: `6380`
+- RabbitMQ Staging: `5673` (Management: `15673`)
+- Microservices: `3021` (`user-service-staging`), `3022` (`notification-service-staging`)
+
+#### Triggering Staging Lifecycle via REST API
+```powershell
+# Deploy staging stack
+curl.exe -X POST -i -u "<USER>:<API_TOKEN>" `
+  "https://jenkins.dedisalam.my.id/job/fullstack-infra-stagging/buildWithParameters?ACTION=deploy&SERVICES=all"
+
+# Check staging status
+curl.exe -X POST -i -u "<USER>:<API_TOKEN>" `
+  "https://jenkins.dedisalam.my.id/job/fullstack-infra-stagging/buildWithParameters?ACTION=status"
+
+# Tear down staging stack
+curl.exe -X POST -i -u "<USER>:<API_TOKEN>" `
+  "https://jenkins.dedisalam.my.id/job/fullstack-infra-stagging/buildWithParameters?ACTION=down"
+```
+

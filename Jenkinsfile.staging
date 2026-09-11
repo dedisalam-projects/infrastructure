@@ -1,0 +1,116 @@
+pipeline {
+    agent any
+
+    options {
+        timeout(time: 15, unit: 'MINUTES')
+        disableConcurrentBuilds()
+    }
+
+    parameters {
+        choice(
+            name: 'ACTION',
+            choices: ['deploy', 'status', 'restart', 'down'],
+            description: 'Aksi orkestrasi staging: deploy (up -d), status (ps), restart, atau down (-v)'
+        )
+        string(
+            name: 'SERVICES',
+            defaultValue: 'all',
+            description: 'Layanan yang akan di-update (default: all)'
+        )
+    }
+
+    stages {
+        stage('Checkout Infrastructure') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Inject Staging Secrets (.env.staging)') {
+            steps {
+                echo 'Mengambil .env.staging dari Jenkins Credentials (infra-staging-env)...'
+                withCredentials([file(credentialsId: 'infra-staging-env', variable: 'STAGING_ENV_FILE')]) {
+                    sh '''
+                        cp "$STAGING_ENV_FILE" .env.staging
+                        chmod 600 .env.staging
+                        echo ".env.staging berhasil di-inject ke workspace."
+                    '''
+                }
+            }
+        }
+
+        stage('Execute Staging Action') {
+            steps {
+                script {
+                    if (params.ACTION == 'deploy') {
+                        echo 'Menjalankan deployment staging stack...'
+                        sh '''
+                            if [ "${SERVICES}" = "all" ] || [ -z "${SERVICES}" ]; then
+                                docker compose -p fullstack-staging --env-file .env.staging -f docker-compose.staging.yml pull
+                                docker compose -p fullstack-staging --env-file .env.staging -f docker-compose.staging.yml up -d --remove-orphans
+                            else
+                                docker compose -p fullstack-staging --env-file .env.staging -f docker-compose.staging.yml pull ${SERVICES}
+                                docker compose -p fullstack-staging --env-file .env.staging -f docker-compose.staging.yml up -d --no-deps --remove-orphans ${SERVICES}
+                            fi
+                        '''
+                    } else if (params.ACTION == 'down') {
+                        echo 'Membersihkan staging stack (tear-down)...'
+                        sh 'docker compose -p fullstack-staging --env-file .env.staging -f docker-compose.staging.yml down -v'
+                    } else if (params.ACTION == 'restart') {
+                        echo "Me-restart layanan staging: ${params.SERVICES}..."
+                        sh '''
+                            if [ "${SERVICES}" = "all" ] || [ -z "${SERVICES}" ]; then
+                                docker compose -p fullstack-staging --env-file .env.staging -f docker-compose.staging.yml restart
+                            else
+                                docker compose -p fullstack-staging --env-file .env.staging -f docker-compose.staging.yml restart ${SERVICES}
+                            fi
+                        '''
+                    } else if (params.ACTION == 'status') {
+                        echo 'Menampilkan status kontainer staging...'
+                        sh 'docker compose -p fullstack-staging --env-file .env.staging -f docker-compose.staging.yml ps'
+                    }
+                }
+            }
+        }
+
+        stage('Verify Healthcheck') {
+            when {
+                expression { return params.ACTION == 'deploy' }
+            }
+            steps {
+                echo 'Memverifikasi kesehatan endpoint Gateway staging...'
+                sh '''
+                    sleep 5
+                    docker compose -p fullstack-staging --env-file .env.staging -f docker-compose.staging.yml ps
+                    
+                    GATEWAY_PORT=$(grep '^GATEWAY_STAGING_PORT=' .env.staging 2>/dev/null | cut -d '=' -f2)
+                    GATEWAY_PORT=${GATEWAY_PORT:-3005}
+                    
+                    for i in $(seq 1 20); do
+                        if curl -s -f "http://127.0.0.1:${GATEWAY_PORT}/api/v1/health" > /dev/null 2>&1; then
+                            echo "Gateway staging sehat dan siap menerima koneksi (port ${GATEWAY_PORT})!"
+                            exit 0
+                        fi
+                        echo "Menunggu Gateway staging sehat ($i/20)..."
+                        sleep 2
+                    done
+                    
+                    echo "Peringatan: Gateway staging belum merespons /health, cek log container."
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Membersihkan file rahasia .env.staging dari workspace...'
+            sh 'rm -f .env.staging || true'
+        }
+        success {
+            echo 'Orkestrasi staging berhasil selesai!'
+        }
+        failure {
+            echo 'Orkestrasi staging gagal! Silakan periksa log container staging.'
+        }
+    }
+}
