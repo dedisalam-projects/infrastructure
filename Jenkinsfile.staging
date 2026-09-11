@@ -46,10 +46,9 @@ pipeline {
                         echo 'Menjalankan deployment staging stack...'
                         sh '''
                             if [ "${SERVICES}" = "all" ] || [ -z "${SERVICES}" ]; then
-                                docker compose -p fullstack-staging --env-file .env.staging -f docker-compose.staging.yml pull
+                                docker compose -p fullstack-staging --env-file .env.staging -f docker-compose.staging.yml pull mongodb redis rabbitmq || true
                                 docker compose -p fullstack-staging --env-file .env.staging -f docker-compose.staging.yml up -d --remove-orphans
                             else
-                                docker compose -p fullstack-staging --env-file .env.staging -f docker-compose.staging.yml pull ${SERVICES}
                                 docker compose -p fullstack-staging --env-file .env.staging -f docker-compose.staging.yml up -d --no-deps --remove-orphans ${SERVICES}
                             fi
                         '''
