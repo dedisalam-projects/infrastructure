@@ -1,16 +1,16 @@
 ---
 name: jenkins-api-orchestration
-description: "Use when managing, diagnosing, or triggering remote Jenkins pipelines via REST API, or when maintaining Docker Compose CI/CD deployment pipelines — authenticate with API tokens, trigger parameterized builds, stream console logs, and manage production credentials"
+description: "Use when managing, diagnosing, or triggering remote Jenkins pipelines via REST API, or when enforcing zero-manual autonomous Jenkins operations -- authenticate with API tokens, create/update jobs via API, trigger parameterized builds, stream console logs, and manage production credentials"
 tier: local
 target-stacks: ["jenkins", "docker-compose", "devops", "bash", "powershell"]
 metadata:
-  origin: synced-from-backend
+  origin: auto-extracted
 ---
 
 # Jenkins API Orchestration & Infrastructure Deployment Automation
 
 **Extracted:** 2026-09-11  
-**Context:** Remote Jenkins server automation (behind Cloudflare / reverse proxies) and continuous deployment orchestration for Docker Compose infrastructure (`fullstack-infrastructure`).
+**Context:** Remote Jenkins server automation (behind Cloudflare / reverse proxies), autonomous agent CI/CD execution, and continuous deployment orchestration for Docker Compose infrastructure (`fullstack-infrastructure`).
 
 ---
 
@@ -20,6 +20,7 @@ metadata:
 2. **Windows PowerShell Alias Collision**: On Windows systems, PowerShell aliases `curl` to `Invoke-WebRequest`, causing commands with standard flags (e.g. `-u`, `-s`, `-X`) to fail with parameter ambiguity errors.
 3. **Deployment Pipeline & Secret Isolation**: Production `.env` secrets must never be committed to Git or leaked into build logs, requiring dynamic injection from Jenkins Credentials Store (`Secret file`) during deployment.
 4. **Parameterized Service Deployment**: Deploying infrastructure should support updating specific microservices (e.g. `gateway user-service notification-service`) without unnecessarily restarting healthy stateful datastores (MongoDB, Redis, RabbitMQ).
+5. **Eliminating Manual User Tasks (Zero-Manual-Jenkins Policy)**: Relying on users to manually navigate web dashboards, create jobs, paste configurations, or trigger pipelines in the Jenkins UI creates human error, friction, and delays.
 
 ---
 
@@ -68,7 +69,44 @@ curl.exe -s -u "<USER>:<API_TOKEN>" "<JENKINS_URL>/job/<JOB_NAME>/<BUILD_NUMBER>
 
 ---
 
-### 2. Infrastructure Deployment Pipeline Pattern
+### 2. Autonomous Agent Execution Standard (Zero-Manual-Jenkins Policy)
+
+#### Mandatory Agent-Led Operations
+- **Zero Delegated UI Clicks**: The agent must NEVER instruct or ask the user to manually click around, configure pipelines, create jobs, or click build buttons in the Jenkins Web UI.
+- **Autonomous API/CLI Execution**: All Jenkins operations (connectivity checks, job provisioning, XML configuration updates, credential uploads, build triggering, console streaming, and status polling) must be executed directly by the agent using `curl.exe` or terminal scripts.
+- **Minimal Credential Ingestion**: The agent prompts the user *only* when an initial secret or token is missing from the environment (e.g. asking for API Token or raw production `.env` contents). As soon as the credential is provided, the agent takes over completely and performs all Jenkins actions autonomously.
+
+#### Autonomous Job Creation & Update Pattern
+Before triggering builds, check and ensure the job exists on the remote Jenkins server:
+```bash
+# 1. Check if job exists (HTTP 200 vs HTTP 404)
+curl.exe -s -o NUL -w "%{http_code}" -u "<USER>:<API_TOKEN>" "<JENKINS_URL>/job/<JOB_NAME>/api/json"
+
+# 2. If 404: Create job from job-config.xml
+curl.exe -X POST -u "<USER>:<API_TOKEN>" \
+  -H "Content-Type: application/xml" \
+  --data-binary "@jenkins/job-config.xml" \
+  "<JENKINS_URL>/createItem?name=<JOB_NAME>"
+
+# 3. If 200: Update existing job configuration
+curl.exe -X POST -u "<USER>:<API_TOKEN>" \
+  -H "Content-Type: application/xml" \
+  --data-binary "@jenkins/job-config.xml" \
+  "<JENKINS_URL>/job/<JOB_NAME>/config.xml"
+```
+
+#### Autonomous Credential Provisioning via API
+Upload production `.env` files directly into Jenkins Credentials Store without requiring manual upload in the browser:
+```bash
+curl.exe -X POST -u "<USER>:<API_TOKEN>" \
+  -H "Content-Type: application/xml" \
+  --data-binary "@jenkins/credentials-infra-prod-env.xml" \
+  "<JENKINS_URL>/credentials/store/system/domain/_/createCredentials"
+```
+
+---
+
+### 3. Infrastructure Deployment Pipeline Pattern
 
 #### Secret Injection Pattern via Jenkins Credentials
 Inject production secrets securely into `.env` at build runtime and purge immediately after:
@@ -122,6 +160,7 @@ post {
 ## When to Use
 
 - When authenticating, triggering, or streaming logs from a remote Jenkins server via terminal or automation agent.
+- When creating, updating, or configuring Jenkins jobs autonomously without manual GUI steps.
 - When triggering or checking the status of `fullstack-infrastructure` deployments.
 - When configuring credentials, secret files, or pipeline steps in `infrastructure/Jenkinsfile`.
 - When `curl` fails with ambiguous parameter errors in PowerShell.
