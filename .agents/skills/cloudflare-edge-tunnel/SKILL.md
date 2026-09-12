@@ -86,6 +86,35 @@ When routing a public hostname to a service running directly on the Docker host 
 - **Do not** use `http://localhost:8080` inside the container.
 - Route to the Docker bridge gateway interface: `http://172.19.0.1:8080` (or `http://host.docker.internal:8080`).
 
+### 4. Zero Trust Dual-Homed Container Network Pattern (Direct Service Discovery)
+Rather than routing containerized services through the host bridge (`172.19.0.1:<PORT>`), edge-facing containers (`gateway`, `nginx`) should join the external `cloudflare` network directly:
+
+```yaml
+services:
+  gateway:
+    networks:
+      - default     # Internal communication with datastores & microservices
+      - cloudflare  # Direct internal resolution by cloudflared
+
+  nginx:
+    networks:
+      - default
+      - cloudflare
+
+networks:
+  default:
+    name: fullstack-infrastructure_default
+  cloudflare:
+    name: cloudflare
+    external: true
+```
+
+**Ingress Target:** In the Cloudflare Tunnel ingress configuration, target containers directly by internal Docker DNS name:
+- `api.dedisalam.my.id`  ──> `http://gateway:3000`
+- `dedisalam.my.id`      ──> `http://nginx:8080`
+
+This eliminates dependence on host port exposures and provides pure internal Zero Trust isolation.
+
 ---
 
 ## R2 S3 Storage Configuration

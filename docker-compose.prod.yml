@@ -166,6 +166,9 @@ services:
       - NOTIFICATION_SERVICE_TCP_PORT=3002
       - NOTIFICATION_SERVICE_TCP_HOST=notification-service
       - GATEWAY_PORT=3000
+    networks:
+      - default
+      - cloudflare
     logging:
       driver: "json-file"
       options:
@@ -228,6 +231,9 @@ services:
     volumes:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./docker/nginx/certs:/etc/nginx/certs:ro
+    networks:
+      - default
+      - cloudflare
     logging:
       driver: "json-file"
       options:
@@ -260,3 +266,6 @@ networks:
   default:
     name: fullstack-infrastructure_default
     driver: bridge
+  cloudflare:
+    name: cloudflare
+    external: true
