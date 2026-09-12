@@ -67,10 +67,10 @@ pipeline {
                     sleep 5
                     docker compose -f docker-compose.prod.yml ps
                     
-                    echo "Memverifikasi Gateway Healthcheck (http://127.0.0.1:3000/api/v1/health)..."
+                    echo "Memverifikasi Gateway Healthcheck (http://127.0.0.1:3000/health)..."
                     HEALTHY=false
                     for i in $(seq 1 20); do
-                        if docker compose -f docker-compose.prod.yml exec -T gateway wget --quiet --tries=1 --spider http://127.0.0.1:3000/api/v1/health > /dev/null 2>&1; then
+                        if docker compose -f docker-compose.prod.yml exec -T gateway wget --quiet --tries=1 --spider http://127.0.0.1:3000/health > /dev/null 2>&1; then
                             echo "Gateway sehat dan siap melayani trafik ($i/20)!"
                             HEALTHY=true
                             break
@@ -80,7 +80,7 @@ pipeline {
                     done
 
                     if [ "$HEALTHY" != "true" ]; then
-                        echo "ERROR: Gateway gagal merespons /api/v1/health setelah 20 percobaan!"
+                        echo "ERROR: Gateway gagal merespons /health setelah 20 percobaan!"
                         echo "=== Status Kontainer ==="
                         docker compose -f docker-compose.prod.yml ps
                         echo "=== Log Gateway ==="
