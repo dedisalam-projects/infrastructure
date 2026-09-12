@@ -14,11 +14,14 @@ infrastructure/
 ├── jenkins/
 │   └── job-config.xml     # Jenkins declarative pipeline job definition
 ├── Jenkinsfile            # Continuous deployment pipeline specification
+├── Jenkinsfile.staging    # Staging continuous integration pipeline
 ├── docker-compose.yml     # Base container stack definition
-├── docker-compose.dev.yml # Local development overlay (exposing ports to host)
-├── docker-compose.dev.server.yml # Development server deployment (172.16.254.2)
+├── docker-compose.dev.yml # Local development overlay (exposing ports to host - strictly local PC)
+├── docker-compose.staging.yml # Staging stack deployment
 └── docker-compose.prod.yml       # Production deployment configuration
 ```
+
+> **Environment Policy**: Development environments are strictly restricted to local developer machines (`docker-compose.dev.yml`). Remote servers are exclusively reserved for Staging and Production workloads.
 
 ## Services Managed
 
@@ -49,19 +52,12 @@ View infrastructure logs:
 docker compose -f docker-compose.dev.yml logs -f
 ```
 
-### 2. Development Server Deployment (172.16.254.2)
-```bash
-ssh dedisalam@172.16.254.2
-cd /path/to/infrastructure
-docker compose -p fullstack-dev -f docker-compose.dev.server.yml up -d --build
-```
-
-### 3. Production Deployment (Manual)
+### 2. Production Deployment (Manual)
 ```bash
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-### 4. Continuous Deployment via Jenkins (`fullstack-infrastructure`)
+### 3. Continuous Deployment via Jenkins (`fullstack-infrastructure`)
 
 Production deployments are automated via the Jenkins CD Pipeline **`fullstack-infrastructure`**, which coordinates zero-downtime updates and secret isolation.
 
@@ -88,7 +84,7 @@ curl.exe -X POST -u "<USER>:<API_TOKEN>" `
   "https://jenkins.dedisalam.my.id/createItem?name=fullstack-infrastructure"
 ```
 
-### 5. Dedicated Staging Environment & CI Pipeline (`fullstack-infra-stagging`)
+### 4. Dedicated Staging Environment & CI Pipeline (`fullstack-infra-stagging`)
 
 To safeguard production datastores from automated tests and ensure determinism across the 7-layer testing matrix (Unit, PBT, Mutation, Realtime Socket.IO E2E, Contracts, Concurrency Load, and Chaos Resilience), a dedicated Staging Docker Compose stack is provided.
 
