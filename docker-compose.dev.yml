@@ -21,6 +21,26 @@ services:
     ports:
       - '6379:6379'
 
+  gateway:
+    extends:
+      file: docker-compose.yml
+      service: gateway
+    image: dedisalam/backend-gateway:latest
+    ports:
+      - '3000:3000'
+
+  user-service:
+    extends:
+      file: docker-compose.yml
+      service: user-service
+    image: dedisalam/backend-user-service:latest
+
+  notification-service:
+    extends:
+      file: docker-compose.yml
+      service: notification-service
+    image: dedisalam/backend-notification-service:latest
+
 networks:
   backend_network:
     driver: bridge

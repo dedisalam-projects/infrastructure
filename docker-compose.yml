@@ -46,7 +46,7 @@ services:
     networks:
       - backend_network
     healthcheck:
-      test: ['CMD', 'rabbitmq-diagnostics', 'check_port_connectivity']
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -107,7 +107,7 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:3000/health']
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://127.0.0.1:3000/api/v1/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -146,7 +146,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:3001/health']
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://127.0.0.1:3001/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -183,7 +183,7 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:3002/health']
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://127.0.0.1:3002/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -248,7 +248,7 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     healthcheck:
-      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:8080/health']
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://127.0.0.1:8080/health']
       interval: 30s
       timeout: 10s
       retries: 3
