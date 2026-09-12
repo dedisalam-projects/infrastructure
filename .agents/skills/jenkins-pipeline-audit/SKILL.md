@@ -1,6 +1,6 @@
 ---
 name: jenkins-pipeline-audit
-description: "Use when auditing Jenkins declarative pipelines, validating Jenkinsfile stage healthchecks for false-green suppression, diagnosing upstream/downstream job chains, or tracing build lineage across interrelated Jenkins jobs"
+description: "Use when auditing Jenkins declarative pipelines, validating Jenkinsfile stage healthchecks for false-green suppression, diagnosing upstream/downstream job chains, tracing build lineage, or detecting and pruning duplicate and zombie Jenkins jobs"
 tier: local
 target-stacks: ["jenkins", "groovy", "pipeline", "ci-cd", "bash", "powershell", "docker-compose"]
 metadata:
@@ -184,6 +184,32 @@ function Audit-JenkinsJobChain {
 Audit-JenkinsJobChain -DownstreamJob "fullstack-infrastructure" -BuildNumber "lastBuild"
 ```
 
+### 7. Zombie & Duplicate Job Detection and Cleanup
+
+Over time, renames, typo corrections, and copy-paste experiments leave behind ghost jobs (`notbuilt`, 0 builds) or parallel duplicate jobs that cause dashboard confusion and parameter drift.
+
+| Audit Step | Action |
+|---|---|
+| **1. Inventory Scan** | List all jobs and identify any with 0 builds (`notbuilt`) or typographical similarity (e.g. `stagging` vs `staging`). |
+| **2. Upstream Cross-Reference** | Grep all workspace `Jenkinsfile*` files for `build job: '<job_name>'` before deleting to ensure no upstream pipeline depends on the legacy name. |
+| **3. Synchronize Upstream Callers** | Update upstream pipeline trigger parameters to use the canonical, standardized job name. |
+| **4. Safe Deletion via REST API** | Delete the confirmed obsolete job via Jenkins REST API: `POST /job/<JOB_NAME>/doDelete`. |
+
+```powershell
+# Automated job purge via Jenkins API
+$jobToDelete = "fullstack-infra-stagging"
+$u = [Environment]::GetEnvironmentVariable("JENKINS_USER", "User")
+$t = [Environment]::GetEnvironmentVariable("JENKINS_API_TOKEN", "User")
+$url = "http://172.16.254.2:8080"
+
+# 1. Verify 0 active running builds before deletion
+$info = curl.exe -s -u "$($u):$($t)" "$url/job/$jobToDelete/api/json" | ConvertFrom-Json
+if ($info.inQueue -eq $false) {
+    curl.exe -s -X POST -u "$($u):$($t)" "$url/job/$jobToDelete/doDelete"
+    Write-Host "[DELETED] Obsolete job $jobToDelete removed successfully." -ForegroundColor Green
+}
+```
+
 ---
 
 ## When to Use
@@ -192,4 +218,6 @@ Audit-JenkinsJobChain -DownstreamJob "fullstack-infrastructure" -BuildNumber "la
 - When diagnosing a deployment pipeline that reports `SUCCESS` while production containers report `unhealthy` or crash.
 - When validating that automated webhook triggers synchronize datastores, networks, and secrets without manual parameter intervention.
 - When tracing build failures or regressions across chained CI/CD pipelines (e.g. identifying which upstream commit triggered a downstream failure).
+- When identifying, cleaning up, and pruning duplicate or zombie/ghost jobs across Jenkins dashboards.
 - Before merging PRs modifying CI/CD orchestration, healthcheck probe routes, or secret injection stages.
+

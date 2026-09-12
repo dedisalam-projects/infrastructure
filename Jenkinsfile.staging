@@ -85,16 +85,25 @@ pipeline {
                     GATEWAY_PORT=$(grep '^GATEWAY_STAGING_PORT=' .env.staging 2>/dev/null | cut -d '=' -f2)
                     GATEWAY_PORT=${GATEWAY_PORT:-3005}
                     
+                    HEALTHY=false
                     for i in $(seq 1 20); do
-                        if curl -s -f "http://127.0.0.1:${GATEWAY_PORT}/api/v1/health" > /dev/null 2>&1; then
+                        if curl -s -f "http://127.0.0.1:${GATEWAY_PORT}/health" > /dev/null 2>&1; then
                             echo "Gateway staging sehat dan siap menerima koneksi (port ${GATEWAY_PORT})!"
-                            exit 0
+                            HEALTHY=true
+                            break
                         fi
                         echo "Menunggu Gateway staging sehat ($i/20)..."
                         sleep 2
                     done
                     
-                    echo "Peringatan: Gateway staging belum merespons /health, cek log container."
+                    if [ "$HEALTHY" != "true" ]; then
+                        echo "ERROR: Gateway staging gagal merespons /health pada port ${GATEWAY_PORT} setelah 20 percobaan!"
+                        echo "=== Status Kontainer Staging ==="
+                        docker compose -p fullstack-staging --env-file .env.staging -f docker-compose.staging.yml ps
+                        echo "=== Log Gateway Staging ==="
+                        docker compose -p fullstack-staging --env-file .env.staging -f docker-compose.staging.yml logs --tail 50 gateway
+                        exit 1
+                    fi
                 '''
             }
         }
