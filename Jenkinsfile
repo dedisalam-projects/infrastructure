@@ -9,8 +9,8 @@ pipeline {
     parameters {
         string(
             name: 'SERVICES', 
-            defaultValue: 'gateway user-service notification-service', 
-            description: 'Layanan yang akan di-update (kosongkan atau isi "all" untuk semua)'
+            defaultValue: 'all', 
+            description: 'Layanan yang akan di-update (default: all untuk sinkronisasi menyeluruh, atau tentukan nama layanan spesifik)'
         )
     }
 
@@ -39,7 +39,7 @@ pipeline {
                 echo "Mengunduh image terbaru untuk: ${params.SERVICES}..."
                 sh '''
                     if [ "${SERVICES}" = "all" ] || [ -z "${SERVICES}" ]; then
-                        docker compose -f docker-compose.prod.yml pull
+                        docker compose -f docker-compose.prod.yml pull --ignore-pull-failures || true
                     else
                         docker compose -f docker-compose.prod.yml pull ${SERVICES}
                     fi
@@ -64,11 +64,33 @@ pipeline {
             steps {
                 echo 'Memverifikasi status container pasca-deployment...'
                 sh '''
-                    sleep 10
+                    sleep 5
                     docker compose -f docker-compose.prod.yml ps
                     
-                    # Verifikasi Gateway Healthcheck
-                    docker compose -f docker-compose.prod.yml exec -T gateway wget --quiet --tries=3 --spider http://127.0.0.1:3000/api/v1/health || true
+                    echo "Memverifikasi Gateway Healthcheck (http://127.0.0.1:3000/api/v1/health)..."
+                    HEALTHY=false
+                    for i in $(seq 1 20); do
+                        if docker compose -f docker-compose.prod.yml exec -T gateway wget --quiet --tries=1 --spider http://127.0.0.1:3000/api/v1/health > /dev/null 2>&1; then
+                            echo "Gateway sehat dan siap melayani trafik ($i/20)!"
+                            HEALTHY=true
+                            break
+                        fi
+                        echo "Menunggu Gateway siap ($i/20)..."
+                        sleep 2
+                    done
+
+                    if [ "$HEALTHY" != "true" ]; then
+                        echo "ERROR: Gateway gagal merespons /api/v1/health setelah 20 percobaan!"
+                        echo "=== Status Kontainer ==="
+                        docker compose -f docker-compose.prod.yml ps
+                        echo "=== Log Gateway ==="
+                        docker compose -f docker-compose.prod.yml logs --tail 50 gateway
+                        echo "=== Log User Service ==="
+                        docker compose -f docker-compose.prod.yml logs --tail 30 user-service
+                        echo "=== Log Notification Service ==="
+                        docker compose -f docker-compose.prod.yml logs --tail 30 notification-service
+                        exit 1
+                    fi
                 '''
             }
         }

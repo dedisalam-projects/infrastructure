@@ -19,7 +19,7 @@
         <hudson.model.StringParameterDefinition>
           <name>SERVICES</name>
           <description>Layanan microservices yang akan di-update (kosongkan atau isi &quot;all&quot; untuk semua layanan)</description>
-          <defaultValue>gateway user-service notification-service</defaultValue>
+          <defaultValue>all</defaultValue>
           <trim>true</trim>
         </hudson.model.StringParameterDefinition>
       </parameterDefinitions>
