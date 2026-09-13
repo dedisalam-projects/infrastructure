@@ -84,7 +84,7 @@ services:
     container_name: user-service
     restart: unless-stopped
     environment:
-      - USER_SERVICE_MONGO_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-root}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/user-db?authSource=admin
+      - USER_SERVICE_MONGO_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-root}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/user_db?authSource=admin
       - JWT_SECRET=${JWT_SECRET}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS}@rabbitmq:5672
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
@@ -120,7 +120,7 @@ services:
     container_name: notification-service
     restart: unless-stopped
     environment:
-      - NOTIFICATION_SERVICE_MONGO_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-root}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/notification-db?authSource=admin
+      - NOTIFICATION_SERVICE_MONGO_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-root}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/notification_db?authSource=admin
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS}@rabbitmq:5672
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
       - NOTIFICATION_SERVICE_TCP_PORT=3002
@@ -288,3 +288,4 @@ networks:
   cloudflare:
     name: cloudflare
     external: true
+
