@@ -131,6 +131,7 @@ When pipelines are chained (e.g. `fullstack-backend` CI -> `fullstack-infrastruc
 | **Step 4** | **Concurrency & Lock Serialization** | Both jobs must declare `disableConcurrentBuilds()`. Verify that sequential upstream runs do not trigger colliding parallel deployments on the same Docker host. |
 | **Step 5** | **Artifact & Image Tag Provenance** | Ensure image pushed by upstream matches the tag pulled by downstream (avoid relying solely on `latest` in high-cadence environments). |
 | **Step 6** | **Failure Propagation & Alerts** | Downstream failure must alert team or reflect back to upstream build status. |
+| **Step 7** | **Container Port & Healthcheck Probe Alignment** | Verify container exposed listening port in upstream Docker images matches downstream Compose `healthcheck.test` probe URLs and Nginx `upstream` definitions. Mismatches cause false `unhealthy` container states that abort reverse proxy startup under `depends_on: condition: service_healthy`. |
 
 ### 6. Automated Chain Lineage Trace Script (PowerShell)
 
