@@ -65,7 +65,7 @@ Production deployments are automated via the Jenkins CD Pipeline **`fullstack-in
 1. **Trigger**: Downstream webhook triggered by `backend` pipeline on `main`/`master` merge, or manual execution with parameters.
 2. **Secret Injection**: Injects production `.env` securely from Jenkins Credential Store (`infra-prod-env` of type `Secret file`) with `chmod 600` and purges it immediately in `post { always }`.
 3. **Full & Selective Deployment**: Default execution (`SERVICES="all"`) ensures full stack synchronization including datastores, networks, and secrets. Supports selective updating of specific microservices (e.g. `SERVICES="gateway user-service"`) with `--no-deps` when datastores are untouched.
-4. **Health Verification**: Performs automated health checks on API Gateway (`/api/v1/health`) post-deployment.
+4. **Health Verification**: Performs automated health checks on API Gateway (`/health`) post-deployment.
 5. **Dangling Image Cleanup**: Runs `docker image prune -f` upon successful deployment.
 
 #### Triggering Deployment via REST API
