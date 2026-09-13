@@ -30,7 +30,7 @@ infrastructure/
 | **MongoDB** | mongo:7 | 27017 | 27017 | Primary datastore (user_db, notification_db) |
 | **RabbitMQ** | rabbitmq:3.13-management-alpine | 5672, 15672 | 5672, 15672 | Asynchronous message broker & management console |
 | **Redis** | redis:7-alpine | 6379 | 6379 | Session cache and refresh token storage |
-| **Nginx** | nginxinc/nginx-unprivileged:1.25-alpine | 8080, 8443 | 80, 443 | Edge reverse proxy & SSL termination |
+| **Cloudflare Tunnel** | cloudflare/cloudflared:latest | - | - | Zero Trust edge ingress, public hostnames & SSL |
 | **Prometheus** | prom/prometheus:latest | 9090 | - | Metrics collection and alerts |
 | **Grafana** | grafana/grafana:latest | 3000 | 3005 | Metrics visualization dashboards |
 
