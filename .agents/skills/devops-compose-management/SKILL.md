@@ -47,6 +47,14 @@ docker compose -f docker-compose.prod.yml up -d
 docker compose -f docker-compose.prod.yml logs -f
 ```
 
+### 5. Production Observability Stack
+Standalone monitoring stack (Prometheus, cAdvisor, Node Exporter, Grafana) attached to `fullstack-infrastructure_default`:
+```bash
+docker compose -f docker-compose.monitoring.yml up -d
+docker compose -f docker-compose.monitoring.yml ps
+docker compose -f docker-compose.monitoring.yml logs -f
+```
+
 ## Useful Diagnostics
 ```bash
 # Check service health status
@@ -56,4 +64,5 @@ docker inspect --format='{{json .State.Health}}' <container_name> | jq
 docker compose -f docker-compose.dev.yml config --quiet
 docker compose -f docker-compose.staging.yml config --quiet
 docker compose -f docker-compose.prod.yml config --quiet
+docker compose -f docker-compose.monitoring.yml config --quiet
 ```
