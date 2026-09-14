@@ -91,7 +91,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASS:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
     ports:
-      - "3005:3000"
+      - "3050:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro

@@ -288,7 +288,7 @@ services:
       - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-admin}
     ports:
-      - '3005:3000'
+      - '3050:3000'
     volumes:
       - grafana_data:/var/lib/grafana
       - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro

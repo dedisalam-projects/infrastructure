@@ -32,7 +32,7 @@ infrastructure/
 | **Redis** | redis:7-alpine | 6379 | 6379 | Session cache and refresh token storage |
 | **Cloudflare Tunnel** | cloudflare/cloudflared:latest | - | - | Zero Trust edge ingress, public hostnames & SSL |
 | **Prometheus** | prom/prometheus:latest | 9090 | - | Metrics collection and alerts |
-| **Grafana** | grafana/grafana:latest | 3000 | 3005 | Metrics visualization dashboards |
+| **Grafana** | grafana/grafana:latest | 3000 | 3050 | Metrics visualization dashboards |
 
 ## Common Commands
 
