@@ -158,6 +158,30 @@ curl.exe -s -H "Authorization: Bearer $env:GRAFANA_API_TOKEN" "$env:GRAFANA_URL/
 
 ---
 
+## Automated Alert Notifications (Discord Webhook Integration)
+
+### 1. Windows Environment Credential Resolution
+Never hardcode Discord webhook URLs in repository files or compose definitions. Store them in persistent Windows User Environment variables (`HKCU:\Environment`) and resolve dynamically:
+
+```powershell
+# Auto-load persistent User environment webhook into session if missing
+if (-not $env:DISCORD_WEBHOOK_URL) {
+    $env:DISCORD_WEBHOOK_URL = (Get-ItemProperty -Path 'HKCU:\Environment').DISCORD_WEBHOOK_URL
+}
+```
+
+### 2. Dispatching Alert Notifications to Discord
+Discord webhooks accept JSON payloads containing message content or structured embeds:
+
+```bash
+# Dispatch incident or alert notification
+curl.exe -s -X POST -H "Content-Type: application/json" \
+  -d '{"content": "🚨 [ALERT] Production Service Down or Container Restart Loop Detected!"}' \
+  "$env:DISCORD_WEBHOOK_URL"
+```
+
+---
+
 ## Verification & Diagnostic Commands
 
 ```bash
