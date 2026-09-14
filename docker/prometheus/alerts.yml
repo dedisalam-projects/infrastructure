@@ -1,11 +1,65 @@
 groups:
-  - name: InstanceDown
+  - name: InfrastructureCoreAlerts
     rules:
-      - alert: InstanceDown
+      - alert: ServiceInstanceDown
         expr: up == 0
         for: 1m
         labels:
           severity: critical
         annotations:
-          summary: "Instance {{ $labels.instance }} is down"
-          description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minute."
+          summary: "Service instance {{ $labels.instance }} is down"
+          description: "Target {{ $labels.instance }} of job {{ $labels.job }} has been unreachable for more than 1 minute."
+
+      - alert: ContainerMemoryApproachingLimit
+        expr: (container_memory_working_set_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) > 0.80 and container_spec_memory_limit_bytes{name!=""} > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} memory usage > 80%"
+          description: "Container {{ $labels.name }} is using more than 80% of its memory limit for > 2m. Risk of OOM-Kill."
+
+      - alert: ContainerMemoryCritical
+        expr: (container_memory_working_set_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) > 0.90 and container_spec_memory_limit_bytes{name!=""} > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CRITICAL: Container {{ $labels.name }} memory usage > 90%"
+          description: "Container {{ $labels.name }} is using more than 90% of its memory limit. Immediate OOM-Kill imminent."
+
+      - alert: ContainerRestartLoop
+        expr: increase(container_start_time_seconds{name!=""}[15m]) > 2
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} crash-restart loop"
+          description: "Container {{ $labels.name }} has restarted more than 2 times in the last 15 minutes."
+
+      - alert: RabbitMQQueueSpike
+        expr: rabbitmq_queues_total > 50
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "RabbitMQ ghost queue leak detected (total: {{ $value }})"
+          description: "Total RabbitMQ queues count reached {{ $value }} (threshold: 50). Probable uncollected RPC/healthcheck queue leak."
+
+      - alert: RabbitMQMemoryHigh
+        expr: rabbitmq_process_resident_memory_bytes > 750000000
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RabbitMQ resident memory is high ({{ $value | humanize1024 }}B)"
+          description: "RabbitMQ broker resident memory exceeded 750MB for > 2m."
+
+      - alert: HostDiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/rootfs"} / node_filesystem_size_bytes{mountpoint="/rootfs"}) < 0.15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host filesystem free disk space < 15%"
+          description: "ThinkCentre host root filesystem free space is below 15%."
