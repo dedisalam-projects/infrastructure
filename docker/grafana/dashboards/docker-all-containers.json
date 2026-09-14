@@ -20,24 +20,393 @@
   "liveNow": false,
   "panels": [
     {
+      "id": 1,
+      "title": "Active Containers",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 3,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "expr": "count(container_last_seen{name!=\"\"})",
+          "legendFormat": "Containers",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Host CPU Usage",
+      "type": "stat",
+      "gridPos": {
+        "x": 3,
+        "y": 0,
+        "w": 3,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          },
+          "unit": "percent",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[1m])) * 100)",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Host RAM Usage",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 3,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "expr": "((node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes) * 100",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Root Disk Free",
+      "type": "stat",
+      "gridPos": {
+        "x": 9,
+        "y": 0,
+        "w": 3,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 15
+              },
+              {
+                "color": "green",
+                "value": 25
+              }
+            ]
+          },
+          "unit": "percent",
+          "decimals": 1
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "expr": "(node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"}) * 100",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "RabbitMQ Total Queues",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 3,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 20
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "expr": "rabbitmq_queues",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Messages Ready",
+      "type": "stat",
+      "gridPos": {
+        "x": 15,
+        "y": 0,
+        "w": 3,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 100
+              },
+              {
+                "color": "red",
+                "value": 500
+              }
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "expr": "sum(rabbitmq_queue_messages_ready)",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Host Load (1m)",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 3,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 4
+              },
+              {
+                "color": "red",
+                "value": 8
+              }
+            ]
+          },
+          "unit": "none",
+          "decimals": 2
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "expr": "node_load1",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Active Alerts",
+      "type": "stat",
+      "gridPos": {
+        "x": 21,
+        "y": 0,
+        "w": 3,
+        "h": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "targets": [
+        {
+          "expr": "count(ALERTS{alertstate=\"firing\"}) or vector(0)",
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 3
       },
       "id": 100,
-      "title": "Production Container Resource Health (All Containers)",
+      "title": "Container Resource Health (cAdvisor Live Metrics)",
       "type": "row"
     },
     {
-      "id": 1,
-      "title": "Container Memory Usage vs Limit (% of Allocated Limit)",
+      "id": 11,
+      "title": "Container Memory Usage (% of Limit)",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 1,
+        "y": 4,
         "w": 12,
         "h": 8
       },
@@ -52,13 +421,21 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 75 },
-              { "color": "red", "value": 90 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
             ]
           }
-        },
-        "overrides": []
+        }
       },
       "targets": [
         {
@@ -69,12 +446,40 @@
       ]
     },
     {
-      "id": 2,
-      "title": "Container CPU Usage (Cores)",
+      "id": 12,
+      "title": "Container Working Set Memory (Bytes)",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 1,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 10
+          },
+          "unit": "bytes"
+        }
+      },
+      "targets": [
+        {
+          "expr": "container_memory_working_set_bytes{name!=\"\"}",
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Container CPU Usage (Cores)",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
         "w": 12,
         "h": 8
       },
@@ -86,8 +491,7 @@
             "fillOpacity": 10
           },
           "unit": "short"
-        },
-        "overrides": []
+        }
       },
       "targets": [
         {
@@ -98,24 +502,56 @@
       ]
     },
     {
+      "id": 14,
+      "title": "Container Network Traffic (Rx / Tx)",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          },
+          "unit": "Bps"
+        }
+      },
+      "targets": [
+        {
+          "expr": "topk(5, rate(container_network_receive_bytes_total{name!=\"\"}[1m]))",
+          "legendFormat": "{{name}} (Rx)",
+          "refId": "A"
+        },
+        {
+          "expr": "topk(5, rate(container_network_transmit_bytes_total{name!=\"\"}[1m]))",
+          "legendFormat": "{{name}} (Tx)",
+          "refId": "B"
+        }
+      ]
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 9
+        "y": 20
       },
       "id": 101,
-      "title": "RabbitMQ Broker & Messaging Metrics",
+      "title": "RabbitMQ Broker & Messaging Telemetry (Queue Leak Defense)",
       "type": "row"
     },
     {
-      "id": 3,
-      "title": "RabbitMQ Total Queues Count (Leak Detector)",
+      "id": 21,
+      "title": "RabbitMQ Total Queues Count (Threshold: 50)",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 10,
+        "y": 21,
         "w": 12,
         "h": 8
       },
@@ -130,29 +566,37 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 20 },
-              { "color": "red", "value": 50 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 20
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
             ]
           }
-        },
-        "overrides": []
+        }
       },
       "targets": [
         {
           "expr": "rabbitmq_queues",
-          "legendFormat": "Total Queues",
+          "legendFormat": "Active Queues",
           "refId": "A"
         }
       ]
     },
     {
-      "id": 4,
-      "title": "RabbitMQ Resident Memory vs Messages Ready",
+      "id": 22,
+      "title": "RabbitMQ Resident RAM vs Ready Messages",
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 10,
+        "y": 21,
         "w": 12,
         "h": 8
       },
@@ -166,10 +610,19 @@
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Messages Ready" },
+            "matcher": {
+              "id": "byName",
+              "options": "Messages Ready"
+            },
             "properties": [
-              { "id": "unit", "value": "short" },
-              { "id": "custom.axisPlacement", "value": "right" }
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
             ]
           }
         ]
@@ -177,7 +630,7 @@
       "targets": [
         {
           "expr": "rabbitmq_process_resident_memory_bytes",
-          "legendFormat": "RAM Resident Bytes",
+          "legendFormat": "Broker RAM Resident",
           "refId": "A"
         },
         {
@@ -188,26 +641,91 @@
       ]
     },
     {
+      "id": 23,
+      "title": "RabbitMQ Connections & Active Channels",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "fillOpacity": 15
+          },
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "expr": "rabbitmq_connections",
+          "legendFormat": "TCP Connections",
+          "refId": "A"
+        },
+        {
+          "expr": "rabbitmq_channels",
+          "legendFormat": "AMQP Channels",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "title": "RabbitMQ Queue Lifecycle Operations (Declared vs Deleted)",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 29,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          },
+          "unit": "ops"
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(rabbitmq_queues_created_total[1m])",
+          "legendFormat": "Created / sec",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(rabbitmq_queues_deleted_total[1m])",
+          "legendFormat": "Deleted / sec",
+          "refId": "B"
+        }
+      ]
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 36
       },
       "id": 102,
-      "title": "ThinkCentre Host Metrics (Node Exporter)",
+      "title": "ThinkCentre Host OS & Scrape Target Status (Node Exporter)",
       "type": "row"
     },
     {
-      "id": 5,
+      "id": 31,
       "title": "Host RAM Available",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 19,
-        "w": 12,
-        "h": 6
+        "y": 37,
+        "w": 8,
+        "h": 7
       },
       "fieldConfig": {
         "defaults": {
@@ -217,8 +735,7 @@
             "fillOpacity": 15
           },
           "unit": "bytes"
-        },
-        "overrides": []
+        }
       },
       "targets": [
         {
@@ -229,14 +746,14 @@
       ]
     },
     {
-      "id": 6,
-      "title": "Host Root Filesystem Disk Usage (%)",
+      "id": 32,
+      "title": "Host Root Disk Used (%)",
       "type": "gauge",
       "gridPos": {
-        "x": 12,
-        "y": 19,
-        "w": 12,
-        "h": 6
+        "x": 8,
+        "y": 37,
+        "w": 8,
+        "h": 7
       },
       "fieldConfig": {
         "defaults": {
@@ -246,18 +763,117 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 70 },
-              { "color": "red", "value": 85 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
             ]
           }
-        },
-        "overrides": []
+        }
       },
       "targets": [
         {
           "expr": "100 - ((node_filesystem_avail_bytes{mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{mountpoint=\"/\"})",
-          "legendFormat": "Root Disk Used %",
+          "legendFormat": "Root Disk Used",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "title": "Host Disk I/O Throughput",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 16,
+        "y": 37,
+        "w": 8,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          },
+          "unit": "Bps"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(node_disk_read_bytes_total[1m]))",
+          "legendFormat": "Disk Read",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(node_disk_written_bytes_total[1m]))",
+          "legendFormat": "Disk Write",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "title": "Scrape Targets Health Status",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 24,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "color": "red",
+                  "text": "DOWN"
+                },
+                "1": {
+                  "color": "green",
+                  "text": "UP"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal"
+      },
+      "targets": [
+        {
+          "expr": "up",
+          "legendFormat": "{{job}} ({{instance}})",
           "refId": "A"
         }
       ]
@@ -270,7 +886,9 @@
     "production",
     "docker",
     "cadvisor",
-    "rabbitmq"
+    "rabbitmq",
+    "node-exporter",
+    "observability"
   ],
   "time": {
     "from": "now-1h",
@@ -280,5 +898,5 @@
   "timezone": "browser",
   "title": "Docker & Infrastructure Production Observability",
   "uid": "infra-prod-all",
-  "version": 1
+  "version": 2
 }
