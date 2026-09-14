@@ -129,6 +129,35 @@ groups:
 
 ---
 
+## Grafana REST API & Service Account Authentication
+
+### 1. Windows Environment Credential Resolution
+Never hardcode Grafana tokens or credentials in repository files. Store them in persistent Windows User Environment variables (`HKCU:\Environment`) and resolve dynamically in scripts:
+
+```powershell
+# Auto-load persistent User environment credentials into session if missing
+if (-not $env:GRAFANA_API_TOKEN) {
+    $env:GRAFANA_API_TOKEN = (Get-ItemProperty -Path 'HKCU:\Environment').GRAFANA_API_TOKEN
+    $env:GRAFANA_URL = (Get-ItemProperty -Path 'HKCU:\Environment').GRAFANA_URL
+}
+```
+
+### 2. Service Account Bearer Authentication
+Grafana Service Account tokens (`glsa_*`) authenticate via standard HTTP `Authorization: Bearer` header:
+
+```bash
+# Verify organization identity
+curl.exe -s -H "Authorization: Bearer $env:GRAFANA_API_TOKEN" "$env:GRAFANA_URL/api/org"
+
+# Search all dashboards
+curl.exe -s -H "Authorization: Bearer $env:GRAFANA_API_TOKEN" "$env:GRAFANA_URL/api/search"
+
+# Query specific dashboard by UID
+curl.exe -s -H "Authorization: Bearer $env:GRAFANA_API_TOKEN" "$env:GRAFANA_URL/api/dashboards/uid/infra-prod-all"
+```
+
+---
+
 ## Verification & Diagnostic Commands
 
 ```bash
