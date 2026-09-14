@@ -2,7 +2,7 @@ groups:
   - name: InfrastructureCoreAlerts
     rules:
       - alert: ServiceInstanceDown
-        expr: up == 0
+        expr: up{job=~"cadvisor|node-exporter|rabbitmq|prometheus"} == 0
         for: 1m
         labels:
           severity: critical
@@ -38,7 +38,7 @@ groups:
           description: "Container {{ $labels.name }} has restarted more than 2 times in the last 15 minutes."
 
       - alert: RabbitMQQueueSpike
-        expr: rabbitmq_queues_total > 50
+        expr: rabbitmq_queues > 50
         for: 2m
         labels:
           severity: critical
@@ -56,7 +56,7 @@ groups:
           description: "RabbitMQ broker resident memory exceeded 750MB for > 2m."
 
       - alert: HostDiskSpaceLow
-        expr: (node_filesystem_avail_bytes{mountpoint="/rootfs"} / node_filesystem_size_bytes{mountpoint="/rootfs"}) < 0.15
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.15
         for: 5m
         labels:
           severity: warning

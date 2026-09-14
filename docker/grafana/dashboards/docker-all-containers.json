@@ -140,7 +140,7 @@
       },
       "targets": [
         {
-          "expr": "rabbitmq_queues_total",
+          "expr": "rabbitmq_queues",
           "legendFormat": "Total Queues",
           "refId": "A"
         }
@@ -181,7 +181,7 @@
           "refId": "A"
         },
         {
-          "expr": "rabbitmq_messages_ready_total",
+          "expr": "sum(rabbitmq_queue_messages_ready)",
           "legendFormat": "Messages Ready",
           "refId": "B"
         }
@@ -256,7 +256,7 @@
       },
       "targets": [
         {
-          "expr": "100 - ((node_filesystem_avail_bytes{mountpoint=\"/rootfs\"} * 100) / node_filesystem_size_bytes{mountpoint=\"/rootfs\"})",
+          "expr": "100 - ((node_filesystem_avail_bytes{mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{mountpoint=\"/\"})",
           "legendFormat": "Root Disk Used %",
           "refId": "A"
         }
