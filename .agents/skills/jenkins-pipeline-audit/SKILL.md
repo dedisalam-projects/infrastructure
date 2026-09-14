@@ -39,6 +39,7 @@ Inspect `Jenkinsfile` for the following anti-patterns:
 | **Parameter Default** | `defaultValue: 'gateway ...'` with `--no-deps` | `defaultValue: 'all'` so automated webhooks synchronize datastores & network. |
 | **Secret Purge** | `sh 'rm -f .env'` in `success {}` only | Place secret cleanup inside `post { always { sh 'rm -f .env \|\| true' } }`. |
 | **Image Pull Resilience** | Unhandled pull error on local/private images | Use `pull --ignore-pull-failures` and set `pull_policy: missing` in Compose. |
+| **Discord Notification** | No build status notifications in `post {}` | Always inject `discord-webhook-url` credential and dispatch success/failure rich embeds. |
 
 ### 2. Automated Static Audit Script
 
@@ -208,6 +209,48 @@ $info = curl.exe -s -u "$($u):$($t)" "$url/job/$jobToDelete/api/json" | ConvertF
 if ($info.inQueue -eq $false) {
     curl.exe -s -X POST -u "$($u):$($t)" "$url/job/$jobToDelete/doDelete"
     Write-Host "[DELETED] Obsolete job $jobToDelete removed successfully." -ForegroundColor Green
+}
+```
+
+### 8. Mandatory Discord Pipeline Notification Standard (`post {}`)
+
+All Jenkins declarative pipelines MUST notify Discord in `post { success {} failure {} }` using the pre-registered `discord-webhook-url` credential (Secret text in Jenkins Credentials Store):
+
+```groovy
+post {
+    always {
+        sh 'rm -f .env || true'
+    }
+    success {
+        withCredentials([string(credentialsId: 'discord-webhook-url', variable: 'DISCORD_WEBHOOK')]) {
+            sh '''
+                curl -s -X POST -H "Content-Type: application/json" \
+                    -d "{
+                        \\"embeds\\": [{
+                            \\"title\\": \\"✅ [SUCCESS] ${JOB_NAME} - #${BUILD_NUMBER}\\",
+                            \\"description\\": \\"Build & deployment berhasil!\\\\n[Lihat Build di Jenkins](${BUILD_URL})\\",
+                            \\"color\\": 5763719,
+                            \\"timestamp\\": \\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\\"
+                        }]
+                    }" "$DISCORD_WEBHOOK" || true
+            '''
+        }
+    }
+    failure {
+        withCredentials([string(credentialsId: 'discord-webhook-url', variable: 'DISCORD_WEBHOOK')]) {
+            sh '''
+                curl -s -X POST -H "Content-Type: application/json" \
+                    -d "{
+                        \\"embeds\\": [{
+                            \\"title\\": \\"❌ [FAILED] ${JOB_NAME} - #${BUILD_NUMBER}\\",
+                            \\"description\\": \\"Pipeline gagal! Periksa console log.\\\\n[Lihat Console Log](${BUILD_URL}console)\\",
+                            \\"color\\": 15548997,
+                            \\"timestamp\\": \\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\\"
+                        }]
+                    }" "$DISCORD_WEBHOOK" || true
+            '''
+        }
+    }
 }
 ```
 

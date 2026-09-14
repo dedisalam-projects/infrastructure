@@ -105,9 +105,35 @@ pipeline {
             echo 'Pembersihan image lama (prune)...'
             sh 'docker image prune -f || true'
             echo 'Deployment infrastruktur dan backend berhasil diperbarui!'
+            withCredentials([string(credentialsId: 'discord-webhook-url', variable: 'DISCORD_WEBHOOK')]) {
+                sh '''
+                    curl -s -X POST -H "Content-Type: application/json" \
+                        -d "{
+                            \\"embeds\\": [{
+                                \\"title\\": \\"✅ [SUCCESS] ${JOB_NAME} - #${BUILD_NUMBER}\\",
+                                \\"description\\": \\"Deployment infrastruktur produksi berhasil diperbarui!\\\\n**Host:** ThinkCentre (172.16.254.2)\\\\n[Lihat Build di Jenkins](${BUILD_URL})\\\\n[Lihat Dashboard Grafana](http://172.16.254.2:3005)\\",
+                                \\"color\\": 5763719,
+                                \\"timestamp\\": \\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\\"
+                            }]
+                        }" "$DISCORD_WEBHOOK" || true
+                '''
+            }
         }
         failure {
             echo 'Deployment infrastruktur gagal! Periksa status container di atas.'
+            withCredentials([string(credentialsId: 'discord-webhook-url', variable: 'DISCORD_WEBHOOK')]) {
+                sh '''
+                    curl -s -X POST -H "Content-Type: application/json" \
+                        -d "{
+                            \\"embeds\\": [{
+                                \\"title\\": \\"❌ [FAILED] ${JOB_NAME} - #${BUILD_NUMBER}\\",
+                                \\"description\\": \\"Deployment infrastruktur produksi gagal!\\\\n**Host:** ThinkCentre (172.16.254.2)\\\\n[Lihat Console Output Jenkins](${BUILD_URL}console)\\",
+                                \\"color\\": 15548997,
+                                \\"timestamp\\": \\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\\"
+                            }]
+                        }" "$DISCORD_WEBHOOK" || true
+                '''
+            }
         }
     }
 }
