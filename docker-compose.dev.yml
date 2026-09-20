@@ -27,7 +27,7 @@ services:
       service: gateway
     image: dedisalam/backend-gateway:latest
     ports:
-      - '127.0.0.1:3000:3000'
+      - '3000:3000'
 
   user-service:
     extends:

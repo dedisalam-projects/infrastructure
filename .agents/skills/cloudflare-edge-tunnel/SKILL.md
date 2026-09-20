@@ -14,6 +14,7 @@ metadata:
 
 > [!CAUTION]
 > **Safety Guardrail**: Modifying DNS routing, ingress tunnels, or Zero Trust access policies directly impacts public network accessibility. Always request user confirmation and approval before updating routing rules or altering edge configurations.
+> **Architecture Boundary**: The `cloudflared` tunnel runs on the remote ThinkCentre host (`172.16.254.2`). The host gateway IP `172.19.0.1` refers to the ThinkCentre's Docker bridge, NOT the local developer's laptop. **NEVER modify Cloudflare ingress rules to point to local development servers running on a developer's laptop**, as the tunnel cannot route to it.
 
 ---
 
@@ -40,7 +41,10 @@ Internet Requests (*.dedisalam.my.id)
  ThinkCentre Host (172.16.254.2)
    └─ Container: cloudflared (172.19.0.4 on 'cloudflare' network)
             ├── jenkins.dedisalam.my.id  ──> http://172.19.0.1:8080 (Jenkins Host)
-            ├── dedisalam.my.id          ──> http://nginx:80 (Production Proxy)
+            ├── api.dedisalam.my.id      ──> http://gateway:3000 (Docker Container)
+            ├── dedisalam.my.id          ──> http://frontend-landing:8080 (Docker Container)
+            ├── dash.dedisalam.my.id     ──> http://frontend-dashboard:8080 (Docker Container)
+            ├── auth.dedisalam.my.id     ──> http://frontend-auth:8080 (Docker Container)
             └── n8n.dedisalam.my.id      ──> http://n8n:5678 (n8n Service)
 ```
 
@@ -114,9 +118,18 @@ networks:
 
 **Ingress Target:** In the Cloudflare Tunnel ingress configuration, target containers directly by internal Docker DNS name:
 - `api.dedisalam.my.id`  ──> `http://gateway:3000`
-- `dedisalam.my.id`      ──> `http://nginx:8080`
+- `dedisalam.my.id`      ──> `http://frontend-landing:8080`
+
+> **Note on Port 8080**: The frontend containers target port `8080` instead of the default `80` because they are built using `nginx-unprivileged` images for security. Non-root users cannot bind to privileged ports (< 1024) in Linux. NEVER "fix" the ingress target to port `80` for these containers.
 
 This eliminates dependence on host port exposures and provides pure internal Zero Trust isolation.
+
+### 5. Local Development Bypass (Hosts File)
+When doing frontend development on a local machine (e.g., Laptop at `192.168.1.x`), do NOT alter the Cloudflare Tunnel ingress. Production uses Docker exclusively (e.g., `frontend-landing:8080`), while local development uses PM2. To test the local PM2 environment, bypass the tunnel entirely by mapping the domains in the developer's local `C:\Windows\System32\drivers\etc\hosts`:
+```text
+127.0.0.1 dedisalam.my.id dash.dedisalam.my.id auth.dedisalam.my.id
+```
+Then run a local reverse proxy (like Nginx/Caddy) to route port 80/443 to the local PM2 development ports (e.g., 4000, 4001, 4002).
 
 ---
 
