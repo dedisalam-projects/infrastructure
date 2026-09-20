@@ -12,6 +12,9 @@ metadata:
 **Extracted:** 2026-09-10  
 **Context:** Reverse proxy routing, SSL termination, and security headers for the Dedisalam edge layer.
 
+> [!CAUTION]
+> **Safety Guardrail**: Updating reverse proxy routing or TLS certificates can disrupt live network connections. Always request confirmation and approval before reloading Nginx or altering proxy configurations.
+
 ## Architecture
 Nginx runs unprivileged using image `nginxinc/nginx-unprivileged:1.25-alpine`:
 - Port `8080` mapped to host `80`

@@ -12,6 +12,9 @@ metadata:
 **Extracted:** 2026-09-12  
 **Context:** Managing Cloudflare Tunnels (`cloudflared`), Zero Trust web ingress routing, remote host bridge networking, and S3-compatible R2 storage for dedicated infrastructure (`dedisalam.my.id`).
 
+> [!CAUTION]
+> **Safety Guardrail**: Modifying DNS routing, ingress tunnels, or Zero Trust access policies directly impacts public network accessibility. Always request user confirmation and approval before updating routing rules or altering edge configurations.
+
 ---
 
 ## Problem

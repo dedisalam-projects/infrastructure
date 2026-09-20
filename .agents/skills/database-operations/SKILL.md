@@ -12,6 +12,9 @@ metadata:
 **Extracted:** 2026-09-10  
 **Context:** Operational procedures for managing MongoDB 7 and Redis 7 in the Dedisalam infrastructure.
 
+> [!CAUTION]
+> **Safety Guardrail**: Running maintenance or shell access directly affects live datastores. Always request explicit confirmation and approval before dropping collections, flushing keys, or restarting database containers.
+
 ## MongoDB 7 Operations
 - **Databases Initialized**: `user_db` and `notification_db` via `docker/mongodb/mongo-init.js`.
 - **Authentication**: Admin credentials supplied via `MONGO_INITDB_ROOT_USERNAME` and `MONGO_INITDB_ROOT_PASSWORD`.
