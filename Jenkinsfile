@@ -69,18 +69,18 @@ pipeline {
                     
                     echo "Memverifikasi Gateway Healthcheck (http://127.0.0.1:3000/health)..."
                     HEALTHY=false
-                    for i in $(seq 1 20); do
+                    for i in $(seq 1 40); do
                         if docker compose -f docker-compose.prod.yml exec -T gateway wget --quiet --tries=1 --spider http://127.0.0.1:3000/health > /dev/null 2>&1; then
-                            echo "Gateway sehat dan siap melayani trafik ($i/20)!"
+                            echo "Gateway sehat dan siap melayani trafik ($i/40)!"
                             HEALTHY=true
                             break
                         fi
-                        echo "Menunggu Gateway siap ($i/20)..."
+                        echo "Menunggu Gateway siap ($i/40)..."
                         sleep 2
                     done
 
                     if [ "$HEALTHY" != "true" ]; then
-                        echo "ERROR: Gateway gagal merespons /health setelah 20 percobaan!"
+                        echo "ERROR: Gateway gagal merespons /health setelah 40 percobaan!"
                         echo "=== Status Kontainer ==="
                         docker compose -f docker-compose.prod.yml ps
                         echo "=== Log Gateway ==="
