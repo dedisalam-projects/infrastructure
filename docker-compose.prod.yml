@@ -155,7 +155,6 @@ services:
     container_name: gateway
     ports:
       - "${GATEWAY_PORT:-3000}:3000"
-      - "${GATEWAY_TCP_PORT:-4000}:4000"
     restart: unless-stopped
     environment:
       - JWT_SECRET=${JWT_SECRET}
