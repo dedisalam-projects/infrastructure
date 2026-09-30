@@ -11,7 +11,7 @@ const superAdminExists = userDb.users.findOne({
 if (!superAdminExists) {
   userDb.users.insertOne({
     email: 'superadmin@example.com',
-    password: '$2b$10$I.VeClX0Khrd.GRlxM.ntOOf6C278AnxXKrq8PgOMw/CwGNG4ZRxS', // Admin123!
+    password: process.env.SUPER_ADMIN_PASSWORD_HASH || '$2b$10$I.VeClX0Khrd.GRlxM.ntOOf6C278AnxXKrq8PgOMw/CwGNG4ZRxS', // Default: Admin123! (MUST BE ROTATED IN PRODUCTION!)
     name: 'Super Administrator',
     role: 'super_admin',
     isActive: true,
