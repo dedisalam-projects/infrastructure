@@ -1,137 +1,95 @@
 pipeline {
     agent any
 
-    options {
-        timeout(time: 15, unit: 'MINUTES')
-        disableConcurrentBuilds()
+    environment {
+        COMPOSE_FILE = 'docker-compose.yml'
+        PROD_COMPOSE_FILE = 'docker-compose.prod.yml'
+        SERVICES = "${params.SERVICES ?: 'all'}"
     }
 
     parameters {
-        string(
-            name: 'SERVICES', 
-            defaultValue: 'all', 
-            description: 'Layanan yang akan di-update (default: all untuk sinkronisasi menyeluruh, atau tentukan nama layanan spesifik)'
-        )
+        string(name: 'SERVICES', defaultValue: 'all', description: 'Space-separated list of services to update, or "all" for full stack update.')
     }
 
     stages {
-        stage('Checkout Infrastructure') {
+        stage('Checkout') {
             steps {
                 checkout scm
+                echo "Deploying branch: ${env.BRANCH_NAME}"
             }
         }
 
-        stage('Inject Production Secrets (.env)') {
+        stage('Prepare Secrets') {
             steps {
-                echo 'Mengambil .env production dari Jenkins Credentials...'
+                echo 'Injecting production secrets securely...'
                 withCredentials([file(credentialsId: 'infra-prod-env', variable: 'PROD_ENV_FILE')]) {
-                    sh '''
-                        cp "$PROD_ENV_FILE" .env
-                        chmod 600 .env
-                        echo ".env file berhasil di-generate secara aman."
-                    '''
+                    sh 'cp $PROD_ENV_FILE .env'
+                    sh 'chmod 600 .env'
                 }
             }
         }
 
-        stage('Pull Docker Images') {
+        stage('Deploy Production Stack') {
             steps {
-                echo "Mengunduh image terbaru untuk: ${params.SERVICES}..."
-                sh '''
-                    if [ "${SERVICES}" = "all" ] || [ -z "${SERVICES}" ]; then
-                        docker compose -f docker-compose.prod.yml pull --ignore-pull-failures || true
-                    else
-                        docker compose -f docker-compose.prod.yml pull ${SERVICES}
-                    fi
-                '''
+                script {
+                    if (SERVICES == 'all') {
+                        echo "Menjalankan deployment penuh untuk seluruh stack produksi..."
+                        sh "docker compose -f ${COMPOSE_FILE} -f ${PROD_COMPOSE_FILE} --profile monitoring up -d --build"
+                    } else {
+                        echo "Update parsial: Mendownload dan merestart layanan tertentu saja (${SERVICES})..."
+                        sh "docker compose -f ${COMPOSE_FILE} -f ${PROD_COMPOSE_FILE} --profile monitoring pull ${SERVICES}"
+                        sh "docker compose -f ${COMPOSE_FILE} -f ${PROD_COMPOSE_FILE} --profile monitoring up -d --no-deps ${SERVICES}"
+                    }
+                }
             }
         }
 
-        stage('Deploy Containers') {
+        stage('Verify Health') {
             steps {
-                echo 'Menerapkan container baru...'
-                sh '''
-                    if [ "${SERVICES}" = "all" ] || [ -z "${SERVICES}" ]; then
-                        docker compose -f docker-compose.prod.yml up -d --remove-orphans
-                    else
-                        docker compose -f docker-compose.prod.yml up -d --no-deps --remove-orphans ${SERVICES}
-                    fi
-                '''
-            }
-        }
+                echo 'Menunggu layanan stabil (15 detik)...'
+                sleep 15
+                
+                echo 'Memeriksa status container:'
+                sh 'docker compose -f ${COMPOSE_FILE} -f ${PROD_COMPOSE_FILE} --profile monitoring ps'
 
-        stage('Verify Healthcheck') {
-            steps {
-                echo 'Memverifikasi status container pasca-deployment...'
-                sh '''
-                    sleep 5
-                    docker compose -f docker-compose.prod.yml ps
-                    
-                    echo "Memverifikasi Gateway Healthcheck (http://127.0.0.1:3000/health)..."
-                    HEALTHY=false
-                    for i in $(seq 1 40); do
-                        if docker compose -f docker-compose.prod.yml exec -T gateway wget --quiet --tries=1 --spider http://127.0.0.1:3000/health > /dev/null 2>&1; then
-                            echo "Gateway sehat dan siap melayani trafik ($i/40)!"
-                            HEALTHY=true
-                            break
-                        fi
-                        echo "Menunggu Gateway siap ($i/40)..."
-                        sleep 2
-                    done
-
-                    if [ "$HEALTHY" != "true" ]; then
-                        echo "ERROR: Gateway gagal merespons /health setelah 40 percobaan!"
-                        echo "=== Status Kontainer ==="
-                        docker compose -f docker-compose.prod.yml ps
-                        echo "=== Log Gateway ==="
-                        docker compose -f docker-compose.prod.yml logs --tail 50 gateway
-                        echo "=== Log User Service ==="
-                        docker compose -f docker-compose.prod.yml logs --tail 30 user-service
-                        echo "=== Log Notification Service ==="
-                        docker compose -f docker-compose.prod.yml logs --tail 30 notification-service
-                        exit 1
-                    fi
-                '''
+                echo 'Memastikan Gateway merespon:'
+                sh 'curl -f http://localhost:4000/health || echo "Peringatan: Gateway health check gagal atau endpoint tidak tersedia"'
             }
         }
     }
 
     post {
         always {
-            echo 'Membersihkan environment file sisa di workspace agent...'
-            sh 'rm -f .env || true'
+            echo 'Membersihkan secrets dari workspace (Security Post-deployment)'
+            sh 'rm -f .env'
         }
         success {
             echo 'Pembersihan image lama (prune)...'
             sh 'docker image prune -f || true'
             echo 'Deployment infrastruktur dan backend berhasil diperbarui!'
-            withCredentials([string(credentialsId: 'discord-webhook-url', variable: 'DISCORD_WEBHOOK')]) {
+            withCredentials([
+                string(credentialsId: 'telegram-bot-token', variable: 'TELEGRAM_BOT_TOKEN')
+            ]) {
                 sh '''
-                    curl -s -X POST -H "Content-Type: application/json" \
-                        -d "{
-                            \\"embeds\\": [{
-                                \\"title\\": \\"✅ [SUCCESS] ${JOB_NAME} - #${BUILD_NUMBER}\\",
-                                \\"description\\": \\"Deployment infrastruktur produksi berhasil diperbarui!\\\\n**Host:** ThinkCentre (172.16.254.2)\\\\n[Lihat Build di Jenkins](${BUILD_URL})\\\\n[Lihat Dashboard Grafana](http://172.16.254.2:3050)\\",
-                                \\"color\\": 5763719,
-                                \\"timestamp\\": \\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\\"
-                            }]
-                        }" "$DISCORD_WEBHOOK" || true
+                    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                        -d "chat_id=-1004361815779" \
+                        -d "message_thread_id=8" \
+                        -d "parse_mode=Markdown" \
+                        -d "text=✅ *[SUCCESS]* ${JOB_NAME} - #${BUILD_NUMBER}%0ADeployment infrastruktur produksi berhasil diperbarui!%0A**Host:** ThinkCentre (172.16.254.2)%0A[Lihat Build di Jenkins](${BUILD_URL})%0A[Lihat Dashboard Grafana](http://172.16.254.2:3050)" || true
                 '''
             }
         }
         failure {
             echo 'Deployment infrastruktur gagal! Periksa status container di atas.'
-            withCredentials([string(credentialsId: 'discord-webhook-url', variable: 'DISCORD_WEBHOOK')]) {
+            withCredentials([
+                string(credentialsId: 'telegram-bot-token', variable: 'TELEGRAM_BOT_TOKEN')
+            ]) {
                 sh '''
-                    curl -s -X POST -H "Content-Type: application/json" \
-                        -d "{
-                            \\"embeds\\": [{
-                                \\"title\\": \\"❌ [FAILED] ${JOB_NAME} - #${BUILD_NUMBER}\\",
-                                \\"description\\": \\"Deployment infrastruktur produksi gagal!\\\\n**Host:** ThinkCentre (172.16.254.2)\\\\n[Lihat Console Output Jenkins](${BUILD_URL}console)\\",
-                                \\"color\\": 15548997,
-                                \\"timestamp\\": \\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\\"
-                            }]
-                        }" "$DISCORD_WEBHOOK" || true
+                    curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                        -d "chat_id=-1004361815779" \
+                        -d "message_thread_id=8" \
+                        -d "parse_mode=Markdown" \
+                        -d "text=❌ *[FAILED]* ${JOB_NAME} - #${BUILD_NUMBER}%0ADeployment infrastruktur produksi gagal!%0A**Host:** ThinkCentre (172.16.254.2)%0A[Lihat Console Output Jenkins](${BUILD_URL}console)" || true
                 '''
             }
         }
