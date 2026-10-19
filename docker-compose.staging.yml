@@ -112,7 +112,6 @@ services:
       - JWT_SECRET=${JWT_SECRET:-staging_jwt_secret_key_testing_only}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-staging_user}:${RABBITMQ_PASS:-staging_rabbitmq_password}@rabbitmq:5672
       - REDIS_URL=redis://:${REDIS_PASSWORD:-staging_redis_password}@redis:6379
-      - USER_SERVICE_TCP_PORT=3001
       - USER_SERVICE_PORT=3011
     networks:
       - staging_network
@@ -152,7 +151,6 @@ services:
       - NOTIFICATION_SERVICE_MONGO_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-root_staging}:${MONGO_INITDB_ROOT_PASSWORD:-staging_mongo_password}@mongodb:27017/notification_db_staging?authSource=admin
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-staging_user}:${RABBITMQ_PASS:-staging_rabbitmq_password}@rabbitmq:5672
       - REDIS_URL=redis://:${REDIS_PASSWORD:-staging_redis_password}@redis:6379
-      - NOTIFICATION_SERVICE_TCP_PORT=3002
       - NOTIFICATION_SERVICE_PORT=3012
     networks:
       - staging_network
@@ -181,6 +179,86 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  blip-services:
+    image: dedisalam/backend-blip-services:${BACKEND_TAG:-staging}
+    pull_policy: missing
+    container_name: blip-services-staging
+    restart: unless-stopped
+    ports:
+      - "${BLIP_SERVICES_STAGING_PORT:-3023}:3013"
+    environment:
+      - BLIP_MONGO_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-root_staging}:${MONGO_INITDB_ROOT_PASSWORD:-staging_mongo_password}@mongodb:27017/dedisalam_staging?authSource=admin
+      - JWT_SECRET=${JWT_SECRET:-staging_jwt_secret_key_testing_only}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-staging_user}:${RABBITMQ_PASS:-staging_rabbitmq_password}@rabbitmq:5672
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-staging_redis_password}@redis:6379
+      - BLIP_SERVICES_PORT=3013
+    networks:
+      - staging_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3013/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+
+  auth-service:
+    image: dedisalam/backend-auth-service:${BACKEND_TAG:-staging}
+    pull_policy: missing
+    container_name: auth-service-staging
+    restart: unless-stopped
+    ports:
+      - "${AUTH_SERVICE_STAGING_PORT:-3025}:3015"
+    environment:
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-root_staging}:${MONGO_INITDB_ROOT_PASSWORD:-staging_mongo_password}@mongodb:27017/user_db_staging?authSource=admin
+      - JWT_SECRET=${JWT_SECRET:-staging_jwt_secret_key_testing_only}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-staging_user}:${RABBITMQ_PASS:-staging_rabbitmq_password}@rabbitmq:5672
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-staging_redis_password}@redis:6379
+      - AUTH_SERVICE_PORT=3015
+    networks:
+      - staging_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3015/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+
   gateway:
     image: dedisalam/backend-gateway:${BACKEND_TAG:-staging}
     pull_policy: missing
@@ -192,10 +270,6 @@ services:
       - JWT_SECRET=${JWT_SECRET:-staging_jwt_secret_key_testing_only}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-staging_user}:${RABBITMQ_PASS:-staging_rabbitmq_password}@rabbitmq:5672
       - REDIS_URL=redis://:${REDIS_PASSWORD:-staging_redis_password}@redis:6379
-      - USER_SERVICE_TCP_PORT=3001
-      - USER_SERVICE_TCP_HOST=user-service
-      - NOTIFICATION_SERVICE_TCP_PORT=3002
-      - NOTIFICATION_SERVICE_TCP_HOST=notification-service
       - GATEWAY_PORT=3000
     networks:
       - staging_network
@@ -212,9 +286,13 @@ services:
       rabbitmq:
         condition: service_healthy
       user-service:
-        condition: service_started
+        condition: service_healthy
       notification-service:
-        condition: service_started
+        condition: service_healthy
+      blip-services:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/health || exit 1"]
       interval: 10s

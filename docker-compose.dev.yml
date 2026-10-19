@@ -41,6 +41,38 @@ services:
       service: notification-service
     image: dedisalam/backend-notification-service:latest
 
+  blip-services:
+    extends:
+      file: docker-compose.yml
+      service: blip-services
+    image: dedisalam/backend-blip-services:latest
+
+  auth-service:
+    extends:
+      file: docker-compose.yml
+      service: auth-service
+    image: dedisalam/backend-auth-service:latest
+
+  pdf-openpdf:
+    extends:
+      file: docker-compose.yml
+      service: pdf-openpdf
+
+  pdf-wkhtmltopdf:
+    extends:
+      file: docker-compose.yml
+      service: pdf-wkhtmltopdf
+
+  pdf-weasyprint:
+    extends:
+      file: docker-compose.yml
+      service: pdf-weasyprint
+
+  pdf-dompdf:
+    extends:
+      file: docker-compose.yml
+      service: pdf-dompdf
+
 networks:
   backend_network:
     driver: bridge

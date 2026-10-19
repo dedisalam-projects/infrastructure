@@ -90,9 +90,6 @@ services:
       - NODE_OPTIONS=--max-old-space-size=512
       - NODE_ENV=development
       - PORT=3000
-      - GATEWAY_TCP_PORT=4000
-      - USER_SERVICE_TCP_HOST=user-service
-      - USER_SERVICE_TCP_PORT=4001
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=15m
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
@@ -101,6 +98,12 @@ services:
       - backend_network
     depends_on:
       user-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+      blip-services:
+        condition: service_healthy
+      auth-service:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -130,9 +133,8 @@ services:
     environment:
       - NODE_OPTIONS=--max-old-space-size=512
       - NODE_ENV=development
-      - USER_SERVICE_PORT=3001
-      - USER_SERVICE_TCP_PORT=4001
-      - USER_SERVICE_MONGO_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/user_db?authSource=admin
+      - PORT=3011
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017?authSource=admin
       - JWT_SECRET=${JWT_SECRET}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
@@ -146,7 +148,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://127.0.0.1:3001/health']
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://127.0.0.1:3011/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -169,12 +171,9 @@ services:
     environment:
       - NODE_OPTIONS=--max-old-space-size=512
       - NODE_ENV=development
-      - NOTIFICATION_SERVICE_PORT=3002
-      - NOTIFICATION_SERVICE_TCP_PORT=4002
-      - NOTIFICATION_SERVICE_MONGO_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/notification_db?authSource=admin
+      - PORT=3012
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017?authSource=admin
       - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672
-      - GATEWAY_TCP_HOST=gateway
-      - GATEWAY_TCP_PORT=4000
     networks:
       - backend_network
     depends_on:
@@ -183,11 +182,204 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://127.0.0.1:3002/health']
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://127.0.0.1:3012/health']
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
+
+  blip-services:
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+    build:
+      context: ../backend
+      dockerfile: docker/blip-services/Dockerfile
+    container_name: blip-services
+    restart: unless-stopped
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=512
+      - NODE_ENV=development
+      - PORT=3013
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017?authSource=admin
+      - JWT_SECRET=${JWT_SECRET}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+      - PDF_OPENPDF_HOST=pdf-openpdf
+      - PDF_OPENPDF_PORT=8081
+      - PDF_WKHTML_HOST=pdf-wkhtmltopdf
+      - PDF_WKHTML_PORT=8082
+      - PDF_WEASYPRINT_HOST=pdf-weasyprint
+      - PDF_WEASYPRINT_PORT=8083
+      - PDF_DOMPDF_HOST=pdf-dompdf
+      - PDF_DOMPDF_PORT=8084
+    networks:
+      - backend_network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      pdf-openpdf:
+        condition: service_healthy
+      pdf-wkhtmltopdf:
+        condition: service_healthy
+      pdf-weasyprint:
+        condition: service_healthy
+      pdf-dompdf:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://127.0.0.1:3013/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  auth-service:
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+    build:
+      context: ../backend
+      dockerfile: docker/auth-service/Dockerfile
+    container_name: auth-service
+    restart: unless-stopped
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=512
+      - NODE_ENV=development
+      - PORT=3015
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017?authSource=admin
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=15m
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+    networks:
+      - backend_network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://127.0.0.1:3015/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  pdf-openpdf:
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 128M
+    build:
+      context: ../backend
+      dockerfile: docker/engines/openpdf/Dockerfile
+    container_name: pdf-openpdf
+    restart: unless-stopped
+    ports:
+      - '8081:8081'
+    networks:
+      - backend_network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8081/health']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  pdf-wkhtmltopdf:
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 128M
+    build:
+      context: ../backend
+      dockerfile: docker/engines/wkhtmltopdf/Dockerfile
+    container_name: pdf-wkhtmltopdf
+    restart: unless-stopped
+    ports:
+      - '8082:8082'
+    networks:
+      - backend_network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8082/health']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  pdf-weasyprint:
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 128M
+    build:
+      context: ../backend
+      dockerfile: docker/engines/weasyprint/Dockerfile
+    container_name: pdf-weasyprint
+    restart: unless-stopped
+    ports:
+      - '8083:8083'
+    networks:
+      - backend_network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8083/health']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  pdf-dompdf:
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 128M
+    build:
+      context: ../backend
+      dockerfile: docker/engines/dompdf/Dockerfile
+    container_name: pdf-dompdf
+    restart: unless-stopped
+    ports:
+      - '8084:8084'
+    networks:
+      - backend_network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8084/health']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   web:
     deploy:
@@ -242,6 +434,10 @@ services:
       user-service:
         condition: service_healthy
       notification-service:
+        condition: service_healthy
+      blip-services:
+        condition: service_healthy
+      auth-service:
         condition: service_healthy
       web:
         condition: service_healthy
